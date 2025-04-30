@@ -1,0 +1,15 @@
+tenant:
+  name: myminio
+  metrics:
+    enabled: true
+  exposeServices:
+    minio: true
+    console: true
+  buckets:
+  - name: my-minio-bucket
+    objectLock: false
+    region: us-east-1
+  configSecret:
+    name: myminio-env-configuration
+    accessKey: minio
+    secretKey: minio123

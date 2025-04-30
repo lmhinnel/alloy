@@ -6,7 +6,12 @@ datasources:
       type: loki
       access: proxy
       url: http://loki-gateway.loki.svc.cluster.local
+      editable: true
     - name: Prometheus
       type: prometheus
       access: proxy
       url: http://prometheus-server.loki.svc.cluster.local
+      editable: true
+    deleteDatasources:
+    - name: Prometheus
+    - name: Loki

@@ -102,8 +102,10 @@ helm upgrade --install kamaji clastix/kamaji --version 1.0.0 -n kamaji-system --
 # Create a Tenant Control Plane
 kubectl apply -f kamaji_v1alpha1_datastore_etcd.yaml
 kubectl apply -f kamaji_v1alpha1_tenantcontrolplane.yaml
-
 kubectl get tcp -w -n kamaji-client
+
+# Get kube config
+k get -n kamaji-client secrets/k8s-133-admin-kubeconfig -o jsonpath='{.data.admin\.conf}'|base64 -d > conf/kamaji.conf
 ```
 
 
@@ -112,4 +114,50 @@ kubectl get tcp -w -n kamaji-client
 ```bash
 # Gen diagram by namespace
 ./k8sviz.sh -n kamaji-system
+```
+
+
+## kind cloud provider
+
+```bash
+docker registry.k8s.io/cloud-provider-kind/cloud-controller-manager:v0.6.0 run --rm --network kind -v /var/run/docker.sock:/var/run/docker.sock cloud-provider-kind
+
+kubectl label node kamaji-cluster-control-plane node.kubernetes.io/exclude-from-external-load-balancers-
+```
+
+## minio
+
+```bash
+# Prerequisites
+k describe -n kube-system pod/kube-controller-manager-kamaji-cluster-control-plane|grep cluster-signing-cert-file -A1
+
+helm repo add minio-operator https://operator.min.io
+helm upgrade --install operator minio-operator/operator --version 7.0.0 -n minio-operator --create-namespace
+kubectl get all -n minio-operator
+
+helm upgrade --install tenant minio-operator/tenant --version 7.0.0 -f values-minio.yaml -n minio-tenant --create-namespace
+watch kubectl get all -n minio-tenant
+kubectl get svc myminio-console -n minio-tenant -o jsonpath="{.status.loadBalancer.ingress[0].ip}:{.spec.ports[0].port}"
+# https minio/minio123
+```
+
+## kube-prometheus-stack
+
+```bash
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm repo update
+
+helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheus-stack --version 70.0.0 -n loki -f values-kube-prometheus-stack.yaml
+
+# kube-prometheus-stack has been installed. Check its status by running:
+kubectl --namespace loki get pods -l "release=kube-prometheus-stack"
+
+# Get Grafana 'admin' user password by running:
+kubectl --namespace loki get secrets kube-prometheus-stack-grafana -o jsonpath="{.data.admin-password}" | base64 -d ; echo
+
+# Access Grafana local instance:
+export POD_NAME=$(kubectl --namespace loki get pod -l "app.kubernetes.io/name=grafana,app.kubernetes.io/instance=kube-prometheus-stack" -oname)
+kubectl --namespace loki port-forward $POD_NAME 3000
+
+# TODO: https://grafana.com/docs/grafana-cloud/monitor-infrastructure/kubernetes-monitoring/configuration/config-other-methods/helm-operator-migration/
 ```

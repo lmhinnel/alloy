@@ -1,0 +1,22 @@
+grafana:
+  adminUser: admin
+  adminPassword: prom-operator
+
+kubeApiServer:
+    serviceMonitor:
+      relabelings:
+      - action: replace
+        targetLabel: cluster
+        replacement: kamaji
+kubeControllerManager:
+    serviceMonitor:
+      relabelings:
+      - action: replace
+        targetLabel: cluster
+        replacement: kamaji
+kubeScheduler:
+    serviceMonitor:
+      relabelings:
+      - action: replace
+        targetLabel: cluster
+        replacement: kamaji
