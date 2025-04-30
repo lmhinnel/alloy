@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kamaji-client
+  labels:
+    name: kamaji-client
+---
+apiVersion: kamaji.clastix.io/v1alpha1
+kind: TenantControlPlane
+metadata:
+  name: k8s-133
+  namespace: kamaji-client
+  labels:
+    tenant.clastix.io: k8s-133
+spec:
+  controlPlane:
+    deployment:
+      replicas: 2
+    service:
+      serviceType: LoadBalancer
+  kubernetes:
+    version: "v1.30.2"
+    kubelet:
+      cgroupfs: systemd
+  networkProfile:
+    port: 6443
+  addons:
+    coreDNS: {}
+    kubeProxy: {}
+    konnectivity:
+      server:
+        port: 8132

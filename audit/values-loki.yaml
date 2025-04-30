@@ -1,0 +1,25 @@
+minio:
+  enabled: true
+
+chunksCache:
+  allocatedMemory: 512
+
+loki:
+  auth_enabled: false
+  useTestSchema: true
+
+gateway:
+  service:
+    type: LoadBalancer
+
+write:
+  replicas: 2
+  affinity: {}
+
+read:
+  replicas: 2
+  affinity: {}
+
+backend:
+  replicas: 2
+  affinity: {}

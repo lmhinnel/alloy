@@ -1,0 +1,12 @@
+datasources: 
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+    - name: Loki
+      type: loki
+      access: proxy
+      url: http://loki-gateway.loki.svc.cluster.local
+    - name: Prometheus
+      type: prometheus
+      access: proxy
+      url: http://prometheus-server.loki.svc.cluster.local
