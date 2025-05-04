@@ -1,3 +1,6 @@
+adminUser: admin
+adminPassword: strongpassword
+
 datasources: 
   datasources.yaml:
     apiVersion: 1
@@ -5,12 +8,12 @@ datasources:
     - name: Loki
       type: loki
       access: proxy
-      url: http://loki-gateway.loki.svc.cluster.local
+      url: http://loki-gateway.default.svc.cluster.local
       editable: true
     - name: Prometheus
       type: prometheus
       access: proxy
-      url: http://prometheus-server.loki.svc.cluster.local
+      url: http://prometheus-server.default.svc.cluster.local
       editable: true
     deleteDatasources:
     - name: Prometheus

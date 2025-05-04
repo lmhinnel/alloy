@@ -3,6 +3,8 @@
 ```bash
 # Create a Kind cluster
 kind create cluster --config kind-config.yaml
+kubectl cluster-info --context kind-kamaji-cluster
+
 ```
 
 
@@ -99,9 +101,15 @@ kubectl apply -f metallb-config.yaml
 helm repo add clastix https://clastix.github.io/charts
 helm upgrade --install kamaji clastix/kamaji --version 1.0.0 -n kamaji-system --create-namespace --set 'resources=null'
 
+# List the available CRDs installed by Kamaji:
+kubectl get customresourcedefinitions.apiextensions.k8s.io
+# List all the Tenant Control Plane resources deployed in your cluster:
+kubectl get tenantcontrolplanes.kamaji.clastix.io --all-namespaces
+
 # Create a Tenant Control Plane
 kubectl apply -f kamaji_v1alpha1_datastore_etcd.yaml
 kubectl apply -f kamaji_v1alpha1_tenantcontrolplane.yaml
+kubectl apply -f kamaji_monitoring.yaml
 kubectl get tcp -w -n kamaji-client
 
 # Get kube config
@@ -160,4 +168,17 @@ export POD_NAME=$(kubectl --namespace loki get pod -l "app.kubernetes.io/name=gr
 kubectl --namespace loki port-forward $POD_NAME 3000
 
 # TODO: https://grafana.com/docs/grafana-cloud/monitor-infrastructure/kubernetes-monitoring/configuration/config-other-methods/helm-operator-migration/
+```
+
+## capi
+
+```bash
+curl -L https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.10.1/clusterctl-linux-amd64 -o clusterctl
+sudo install -o root -g root -m 0755 clusterctl /usr/local/bin/clusterctl
+clusterctl version
+
+# Install the Cluster API provider for Docker
+export CLUSTER_TOPOLOGY=true
+clusterctl init --infrastructure docker
+
 ```

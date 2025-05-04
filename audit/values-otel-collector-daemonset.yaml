@@ -1,0 +1,127 @@
+mode: daemonset
+
+image:
+  repository: ghcr.io/open-telemetry/opentelemetry-collector-releases/opentelemetry-collector-contrib
+  tag: 0.125.0
+
+presets:
+  logsCollection:
+    enabled: true
+    includeCollectorLogs: true
+
+resources:
+  limits:
+    cpu: 250m
+    memory: 512Mi
+
+extraVolumes:
+  - name: varlog
+    hostPath:
+      path: /var/log
+
+extraVolumeMounts:
+  - name: varlog
+    mountPath: /var/log
+    readOnly: true
+
+config:
+  extensions:
+    # The health_check extension is mandatory for this chart.
+    # Without the health_check extension the collector will fail the readiness and liveliness probes.
+    # The health_check extension can be modified, but should never be removed.
+    health_check:
+      endpoint: ${env:MY_POD_IP}:13133
+
+  receivers:
+    filelog:
+      include:
+        - /var/log/pods/*/*/*.log
+      start_at: beginning
+      include_file_path: true
+      include_file_name: false
+      operators:
+        # Find out which format is used by kubernetes
+        - type: router
+          id: get-format
+          routes:
+            - output: parser-docker
+              expr: 'body matches "^\\{"'
+            - output: parser-crio
+              expr: 'body matches "^[^ Z]+ "'
+            - output: parser-containerd
+              expr: 'body matches "^[^ Z]+Z"'
+        # Parse CRI-O format
+        - type: regex_parser
+          id: parser-crio
+          regex: '^(?P<time>[^ Z]+) (?P<stream>stdout|stderr) (?P<logtag>[^ ]*) ?(?P<log>.*)$'
+          output: extract_metadata_from_filepath
+          timestamp:
+            parse_from: attributes.time
+            layout_type: gotime
+            layout: '2006-01-02T15:04:05.999999999Z07:00'
+        # Parse CRI-Containerd format
+        - type: regex_parser
+          id: parser-containerd
+          regex: '^(?P<time>[^ ^Z]+Z) (?P<stream>stdout|stderr) (?P<logtag>[^ ]*) ?(?P<log>.*)$'
+          output: extract_metadata_from_filepath
+          timestamp:
+            parse_from: attributes.time
+            layout: '%Y-%m-%dT%H:%M:%S.%LZ'
+        # Parse Docker format
+        - type: json_parser
+          id: parser-docker
+          output: extract_metadata_from_filepath
+          timestamp:
+            parse_from: attributes.time
+            layout: '%Y-%m-%dT%H:%M:%S.%LZ'
+        - type: move
+          from: attributes.log
+          to: body
+        # Extract metadata from file path
+        - type: regex_parser
+          id: extract_metadata_from_filepath
+          # Pod UID is not always 36 characters long
+          regex: '^.*\/(?P<namespace>[^_]+)_(?P<pod_name>[^_]+)_(?P<uid>[a-f0-9\-]{16,36})\/(?P<container_name>[^\._]+)\/(?P<restart_count>\d+)\.log$'
+          parse_from: attributes["log.file.path"]
+          cache:
+            size: 128 # default maximum amount of Pods per Node is 110
+        # Rename attributes
+        - type: move
+          from: attributes["log.file.path"]
+          to: resource["filename"]
+        - type: move
+          from: attributes.container_name
+          to: resource["container"]
+        - type: move
+          from: attributes.namespace
+          to: resource["namespace"]
+        - type: move
+          from: attributes.pod_name
+          to: resource["pod"]
+        - type: add
+          field: resource["cluster"]
+          value: 'kind-kamaji-cluster'
+
+  processors:
+    resource:
+      attributes:
+        - action: insert
+          key: loki.format
+          value: raw
+        - action: insert
+          key: loki.resource.labels
+          value: pod, namespace, container, cluster, filename
+
+  exporters:
+    loki:
+      endpoint: http://loki-gateway.default.svc.cluster.local/loki/api/v1/push
+
+  service:
+    extensions:
+      - health_check
+      # - memory_ballast
+    pipelines:
+      logs:
+        receivers: [filelog]
+        processors: [resource]
+        exporters: [loki]
