@@ -15,7 +15,24 @@ metadata:
 spec:
   controlPlane:
     deployment:
-      replicas: 2
+      replicas: 1
+      extraArgs:
+        apiServer:
+          - --enable-admission-plugins=NodeRestriction
+          - --audit-policy-file=/etc/kubernetes/audit/policy.yaml
+          - --audit-log-path=/etc/kubernetes/audit/audit.log
+          - --audit-log-maxsize=500
+          - --audit-log-maxbackup=3
+      additionalVolumeMounts:
+        apiServer:
+          - name: audit-logs
+            mountPath: /etc/kubernetes/audit
+            readOnly: false
+      additionalVolumes:
+        - name: audit-logs
+          hostPath:
+            path: /etc/kubernetes/audit
+            type: DirectoryOrCreate
     service:
       serviceType: LoadBalancer
   kubernetes:

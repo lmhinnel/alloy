@@ -43,8 +43,6 @@ kubectl wait -n kubevirt kv kubevirt --for=condition=Available --timeout=10m
 ## otel
 ```bash
 helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
-helm upgrade --install my-opentelemetry-collector-deployment open-telemetry/opentelemetry-collector -n default --version 0.122.4 --values values-otel-collector-deployment.yaml
-helm upgrade --install my-opentelemetry-collector-daemonset open-telemetry/opentelemetry-collector -n default --version 0.122.4 --values values-otel-collector-daemonset.yaml
 
 helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
 
@@ -66,7 +64,10 @@ curl --location 'http://127.0.0.1:3100/loki/api/v1/query_range' --header 'Conten
 # grafana
 # grafana.default.svc.cluster.local
 helm upgrade --install grafana grafana/grafana --version 8.10.1 -n default -f values-grafana.yaml
+kubectl --namespace default port-forward $(kubectl get pods --namespace default -l "app.kubernetes.io/name=grafana,app.kubernetes.io/instance=grafana" -o jsonpath="{.items[0].metadata.name}") 3000
 
 # rbac
+helm upgrade --install my-opentelemetry-collector-deployment open-telemetry/opentelemetry-collector -n default --version 0.122.4 --values values-otel-collector-deployment.yaml
+helm upgrade --install my-opentelemetry-collector-daemonset open-telemetry/opentelemetry-collector -n default --version 0.122.4 --values values-otel-collector-daemonset.yaml
 k apply -f rbac-otel-collector.yaml
 ```
