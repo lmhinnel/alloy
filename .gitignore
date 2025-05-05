@@ -2,3 +2,4 @@ audit/metallb-config.yaml
 audit/diagram/*.png
 audit/conf/*.conf
 audit/lib/
+audit/my-cluster.kubeconfig
